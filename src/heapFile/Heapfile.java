@@ -19,12 +19,13 @@ import diskmgr.*;
 
 public class Heapfile {
 	private HFPage page;
-
+	private int recCnt;
 	public Heapfile(String string) throws FileNameTooLongException,
 			InvalidPageNumberException, InvalidRunSizeException,
 			DuplicateEntryException, OutOfSpaceException, FileIOException,
 			DiskMgrException, IOException {
 		page = new HFPage();
+		recCnt = 0;
 		SystemDefs.JavabaseDB.openDB(SystemDefs.JavabaseDBName);
 		// TODO Auto-generated constructor stub
 		PageId pid = new PageId();
@@ -47,9 +48,81 @@ public class Heapfile {
 
 	public RID insertRecord(byte[] byteArray) throws ChainException {
 		// TODO Auto-generated method stub
-		Page page;
+		boolean go = true;
+		PageId idOfLastPage = new PageId();
+
+		while (true) {
+
+			try {
+				if (page != null && page.getNextPage() == null) {
+
+					idOfLastPage.copyPageId(page.getCurPage());
+
+				}
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
+			try {
+
+				SystemDefs.JavabaseBM.pinPage(page.getCurPage(), page, true);
+				if (page.available_space() >= byteArray.length) {
+
+					go = false;
+					RID newRid = new RID();
+					newRid = page.insertRecord(byteArray);
+
+					SystemDefs.JavabaseBM.unpinPage(page.getCurPage(), true);
+					recCnt ++;
+					return newRid;
+
+				} else {
+					SystemDefs.JavabaseBM.unpinPage(page.getCurPage(), false);
+					PageId newPageId = page.getNextPage();
+					if (newPageId == null)
+						break;
+					page.setCurPage(newPageId);
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+
+		if (go) {
+
+			try {
+				PageId newPageId = SystemDefs.JavabaseBM.newPage(new Page(), 1);
+				page.setCurPage(newPageId);
+				if (page.available_space() >= byteArray.length) {
+					RID newRid = new RID();
+					newRid = page.insertRecord(byteArray);
+					newRid.pageNo = newPageId;
+					page.setPrevPage(idOfLastPage);
+					page.setCurPage(idOfLastPage);
+					page.setNextPage(newPageId);
+					SystemDefs.JavabaseBM.unpinPage(newPageId, true);
+					recCnt++;
+					return newRid;
+				}
+				// throw exception
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+
 		return null;
+
+		// this return statement has no use at all but removing the error from
+		// the method ... we may need to change this later ;
+
 	}
+
 
 	public int getRecCnt() {
 		// TODO Auto-generated method stub
