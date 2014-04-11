@@ -42,7 +42,7 @@ public class Heapfile {
 
 	public Scan openScan() {
 		// TODO Auto-generated method stub
-		return null;
+		return new Scan(page);
 	}
 
 	public RID insertRecord(byte[] byteArray) throws ChainException {
@@ -69,15 +69,14 @@ public class Heapfile {
 				RID firstRec = page.firstRecord();
 				while(firstRec!=null)
 				{
-					firstRec = page.nextRecord(firstRec);
-					if(firstRec == null)
-						break;
 					if(firstRec == rid)
 					{
 						found = true;
 						page.deleteRecord(rid);
-						break;
+						SystemDefs.JavabaseBM.unpinPage(temp, true);
+						return true;
 					}
+					firstRec = page.nextRecord(firstRec);
 				}
 				SystemDefs.JavabaseBM.unpinPage(temp, true);
 			}
@@ -121,6 +120,8 @@ public class Heapfile {
 
 	public boolean updateRecord(RID rid, Tuple newTuple) throws ChainException {
 		// TODO Auto-generated method stub
+		
+		
 		return false;
 	}
 
