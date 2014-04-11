@@ -24,9 +24,21 @@ public class Heapfile {
 			InvalidPageNumberException, InvalidRunSizeException,
 			DuplicateEntryException, OutOfSpaceException, FileIOException,
 			DiskMgrException, IOException {
+		SystemDefs.JavabaseDB.openDB(SystemDefs.JavabaseDBName);
 		// TODO Auto-generated constructor stub
 		PageId pid = new PageId();
-		SystemDefs.JavabaseDB.add_file_entry(string, pid);
+		if(SystemDefs.JavabaseDB.get_file_entry(string) == null)
+		{
+			SystemDefs.JavabaseDB.add_file_entry(string, pid);
+			System.out.println(pid);
+//			page.setNextPage(pid);
+		}
+		else
+		{
+			pid = (SystemDefs.JavabaseDB.get_file_entry(string));
+			System.out.println(pid);
+//			page.setCurPage(pid);
+		}
 	}
 
 	public Scan openScan() {
