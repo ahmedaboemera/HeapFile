@@ -12,7 +12,12 @@ public class Scan {
 
 	public void closescan() {
 		// TODO Auto-generated method stub
-		
+		try {
+			this.finalize();
+		} catch (Throwable e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }

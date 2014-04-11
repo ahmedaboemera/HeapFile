@@ -109,7 +109,7 @@ public boolean runTests () {
       System.err.println ("*** Could not create heap file\n");
       e.printStackTrace();
     }
-
+    
     if ( status == OK && SystemDefs.JavabaseBM.getNumUnpinnedBuffers()
 	 != SystemDefs.JavabaseBM.getNumBuffers() ) {
       System.err.println ("*** The heap file has left pages pinned\n");
