@@ -1,6 +1,7 @@
 package heapFile;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import bufmgr.BufMgr;
 import bufmgr.BufMgrException;
@@ -32,7 +33,7 @@ public class Heapfile {
 		if(SystemDefs.JavabaseDB.get_file_entry(string) == null)
 		{
 			SystemDefs.JavabaseDB.add_file_entry(string, pid);
-			page.setCurPage(pid);
+			page.init(pid, new Page());
 		}
 		else
 		{
@@ -50,37 +51,33 @@ public class Heapfile {
 		// TODO Auto-generated method stub
 		boolean go = true;
 		PageId idOfLastPage = new PageId();
-
 		while (true) {
-
 			try {
-				if (page != null && page.getNextPage() == null) {
+				if (page != null && page.getNextPage().pid == -1) {
 
 					idOfLastPage.copyPageId(page.getCurPage());
-
 				}
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-
 			try {
-
-				SystemDefs.JavabaseBM.pinPage(page.getCurPage(), page, true);
+				Page tempage = new Page(page.getpage());
+				SystemDefs.JavabaseBM.pinPage(page.getCurPage(), tempage, true);
 				if (page.available_space() >= byteArray.length) {
-
 					go = false;
 					RID newRid = new RID();
 					newRid = page.insertRecord(byteArray);
-
 					SystemDefs.JavabaseBM.unpinPage(page.getCurPage(), true);
 					recCnt ++;
 					return newRid;
 
-				} else {
+				}
+				else {
+					
 					SystemDefs.JavabaseBM.unpinPage(page.getCurPage(), false);
 					PageId newPageId = page.getNextPage();
-					if (newPageId == null)
+					if (newPageId.pid == -1)
 						break;
 					page.setCurPage(newPageId);
 				}
@@ -95,6 +92,7 @@ public class Heapfile {
 
 			try {
 				PageId newPageId = SystemDefs.JavabaseBM.newPage(new Page(), 1);
+				page.init(newPageId, new Page());
 				page.setCurPage(newPageId);
 				if (page.available_space() >= byteArray.length) {
 					RID newRid = new RID();
@@ -103,11 +101,13 @@ public class Heapfile {
 					page.setPrevPage(idOfLastPage);
 					page.setCurPage(idOfLastPage);
 					page.setNextPage(newPageId);
+					page.setCurPage(newPageId);
+					page.setNextPage(new PageId(-1));
 					SystemDefs.JavabaseBM.unpinPage(newPageId, true);
 					recCnt++;
 					return newRid;
 				}
-				// throw exception
+//				 throw exception
 
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -126,7 +126,7 @@ public class Heapfile {
 
 	public int getRecCnt() {
 		// TODO Auto-generated method stub
-		return 0;
+		return recCnt;
 	}
 
 	public boolean deleteRecord(RID rid) {

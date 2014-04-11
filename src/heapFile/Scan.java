@@ -2,6 +2,7 @@ package heapFile;
 
 import java.io.IOException;
 
+import diskmgr.Page;
 import sun.text.normalizer.CharTrie.FriendAgent;
 import bufmgr.BufMgrException;
 import bufmgr.BufferPoolExceededException;
@@ -25,16 +26,47 @@ public class Scan {
 	public Scan(HFPage now) {
 		// TODO Auto-generated constructor stub
 		this.curHFpage = now;
+		try {
+			SystemDefs.JavabaseBM.pinPage(now.getCurPage(), now, false);
+		} catch (ReplacerException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (HashOperationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (PageUnpinnedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidFrameNumberException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (PageNotReadException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BufferPoolExceededException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (PagePinnedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BufMgrException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public Tuple getNext(RID rid) {
 		// TODO Auto-generated method stub
 		boolean found = false;
 		try {
+			PageId temp = curHFpage.getCurPage();
 			while (!found) {
-					PageId temp = curHFpage.getNextPage();
-					if(temp == null)
+					if(temp.pid == -1)
 						break;
+					Page tempage = new Page(curHFpage.getHFpageArray());
 					SystemDefs.JavabaseBM.pinPage(temp, curHFpage, false);
 					RID firstRid = curHFpage.firstRecord();
 					while(firstRid != null)
@@ -49,6 +81,7 @@ public class Scan {
 						
 					}
 					SystemDefs.JavabaseBM.unpinPage(temp, false);
+					temp = curHFpage.getNextPage();
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

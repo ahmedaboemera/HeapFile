@@ -142,7 +142,6 @@ public boolean runTests () {
 	  status = FAIL;
 	}
       }
-      
       try {
 	if ( f.getRecCnt() != choice ) {
 	  status = FAIL;
@@ -168,6 +167,7 @@ public boolean runTests () {
       
       try {
 	scan = f.openScan();
+	System.out.println("scan openned");
       }
       catch (Exception e) {
 	status = FAIL;
