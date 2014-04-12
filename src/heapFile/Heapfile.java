@@ -1,6 +1,7 @@
 package heapFile;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import bufmgr.BufMgrException;
 import bufmgr.BufferPoolExceededException;
@@ -76,7 +77,7 @@ public class Heapfile {
 					newRid = page.insertRecord(byteArray);
 					SystemDefs.JavabaseBM.unpinPage(page.getCurPage(), true);
 					recCnt++;
-					page.setCurPage(firstPid);
+//					page.setCurPage(firstPid);
 					return newRid;
 
 				} else {
@@ -111,7 +112,7 @@ public class Heapfile {
 					page.setNextPage(new PageId(-1));
 					SystemDefs.JavabaseBM.unpinPage(newPageId, true);
 					recCnt++;
-					page.setCurPage(firstPid);
+//					page.setCurPage(firstPid);
 					return newRid;
 				}
 				// throw exception
@@ -224,7 +225,7 @@ public class Heapfile {
 						return true;
 
 					} else {
-
+						throw new InvalidUpdateException(null, "heap.InvalidUpdateException");
 						// throw the exception here aboemera :)
 						// I left this part for you because of the problems I
 						// have with the jar

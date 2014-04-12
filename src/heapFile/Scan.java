@@ -1,6 +1,5 @@
 package heapFile;
 
-import global.PageId;
 import global.RID;
 import global.SystemDefs;
 import heap.HFPage;
@@ -22,17 +21,10 @@ import diskmgr.Page;
 
 public class Scan {
 	private  HFPage curHFpage;
-	private PageId firstpid;
 
 	public Scan(HFPage now) {
 		// TODO Auto-generated constructor stub
 		this.curHFpage = now;
-		try {
-			firstpid = now.getCurPage();
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
 		try {
 			Page myPage = new Page(now.getHFpageArray());
 			SystemDefs.JavabaseBM.pinPage(now.getCurPage(), myPage, false);
@@ -68,31 +60,37 @@ public class Scan {
 
 	public Tuple getNext(RID rid) {
 		// TODO Auto-generated method stub
-		boolean found = false;
 		try {
-			while (!found) {
-				PageId temp = curHFpage.getCurPage();
-					if(temp.pid == -1)
-						break;
-					Page tempage = new Page(curHFpage.getHFpageArray());
-					SystemDefs.JavabaseBM.pinPage(temp, tempage, false);
-					RID firstRid = curHFpage.firstRecord();
-					while(curHFpage.nextRecord(firstRid) != null)
+			curHFpage.setCurPage(rid.pageNo);
+			RID frid = curHFpage.firstRecord();
+			Page mypage = new Page(curHFpage.getHFpageArray());
+			SystemDefs.JavabaseBM.pinPage(rid.pageNo, mypage, false);
+			while(frid!= null){
+				if(frid.equals(rid))
+				{
+					if(curHFpage.nextRecord(rid) == null)
 					{
-						if(firstRid.equals(rid))
-						{
-							SystemDefs.JavabaseBM.unpinPage(temp, false);
-							Tuple ret = curHFpage.getRecord(curHFpage.nextRecord(firstRid));
-							rid = curHFpage.nextRecord(rid);
-							return ret;
-						}
-						firstRid = curHFpage.nextRecord(firstRid);
-						
+						SystemDefs.JavabaseBM.unpinPage(frid.pageNo, false);
+						curHFpage.setCurPage(curHFpage.getNextPage());
+						Page mynewpage = new Page(curHFpage.getHFpageArray());
+						SystemDefs.JavabaseBM.pinPage(curHFpage.getCurPage(), mynewpage	, false);
+						rid = curHFpage.firstRecord();
+						Tuple inst = curHFpage.getRecord(rid);
+						SystemDefs.JavabaseBM.unpinPage(curHFpage.getCurPage(), false);
+						return inst;
 					}
-					SystemDefs.JavabaseBM.unpinPage(temp, false);
-					curHFpage.setCurPage(curHFpage.getNextPage());
+					rid = curHFpage.nextRecord(rid);
+					Tuple inst = curHFpage.getRecord(rid);
+					SystemDefs.JavabaseBM.unpinPage(curHFpage.getCurPage(), false);
+					return inst;
+				}
+				frid = curHFpage.nextRecord(frid);
 			}
+			return null;
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidSlotNumberException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (ReplacerException e) {
@@ -120,9 +118,6 @@ public class Scan {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (HashEntryNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidSlotNumberException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
