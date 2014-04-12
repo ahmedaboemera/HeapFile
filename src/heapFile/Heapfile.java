@@ -1,9 +1,7 @@
 package heapFile;
 
 import java.io.IOException;
-import java.util.Arrays;
 
-import bufmgr.BufMgr;
 import bufmgr.BufMgrException;
 import bufmgr.BufferPoolExceededException;
 import bufmgr.HashEntryNotFoundException;
@@ -21,6 +19,8 @@ import diskmgr.*;
 public class Heapfile {
 	private HFPage page;
 	private int recCnt;
+	private PageId firstPid;
+
 	public Heapfile(String string) throws FileNameTooLongException,
 			InvalidPageNumberException, InvalidRunSizeException,
 			DuplicateEntryException, OutOfSpaceException, FileIOException,
@@ -29,22 +29,28 @@ public class Heapfile {
 		recCnt = 0;
 		SystemDefs.JavabaseDB.openDB(SystemDefs.JavabaseDBName);
 		// TODO Auto-generated constructor stub
-		PageId pid = new PageId();
-		if(SystemDefs.JavabaseDB.get_file_entry(string) == null)
-		{
-			SystemDefs.JavabaseDB.add_file_entry(string, pid);
-			page.init(pid, new Page());
-		}
-		else
-		{
-			pid = (SystemDefs.JavabaseDB.get_file_entry(string));
-			page.setCurPage(pid);
+		firstPid = new PageId();
+		if (SystemDefs.JavabaseDB.get_file_entry(string) == null) {
+			SystemDefs.JavabaseDB.add_file_entry(string, firstPid);
+			page.init(firstPid, new Page());
+			page.setCurPage(firstPid);
+			page.setNextPage(new PageId(-1));
+		} else {
+			firstPid = (SystemDefs.JavabaseDB.get_file_entry(string));
+			page.setCurPage(firstPid);
 		}
 	}
 
 	public Scan openScan() {
 		// TODO Auto-generated method stub
-		return new Scan(page);
+		try {
+			page.setCurPage(firstPid);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		Scan scan = new Scan(page);
+		return scan;
 	}
 
 	public RID insertRecord(byte[] byteArray) throws ChainException {
@@ -69,12 +75,12 @@ public class Heapfile {
 					RID newRid = new RID();
 					newRid = page.insertRecord(byteArray);
 					SystemDefs.JavabaseBM.unpinPage(page.getCurPage(), true);
-					recCnt ++;
+					recCnt++;
+					page.setCurPage(firstPid);
 					return newRid;
 
-				}
-				else {
-					
+				} else {
+
 					SystemDefs.JavabaseBM.unpinPage(page.getCurPage(), false);
 					PageId newPageId = page.getNextPage();
 					if (newPageId.pid == -1)
@@ -105,9 +111,10 @@ public class Heapfile {
 					page.setNextPage(new PageId(-1));
 					SystemDefs.JavabaseBM.unpinPage(newPageId, true);
 					recCnt++;
+					page.setCurPage(firstPid);
 					return newRid;
 				}
-//				 throw exception
+				// throw exception
 
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -123,7 +130,6 @@ public class Heapfile {
 
 	}
 
-
 	public int getRecCnt() {
 		// TODO Auto-generated method stub
 		return recCnt;
@@ -135,15 +141,13 @@ public class Heapfile {
 		try {
 			while (!found) {
 				PageId temp = page.getNextPage();
-				if(temp == null)
+				if (temp == null)
 					break;
 				SystemDefs.JavabaseBM.pinPage(temp, page, true);
 				page.setCurPage(temp);
 				RID firstRec = page.firstRecord();
-				while(firstRec!=null)
-				{
-					if(firstRec == rid)
-					{
+				while (firstRec != null) {
+					if (firstRec == rid) {
 						found = true;
 						page.deleteRecord(rid);
 						SystemDefs.JavabaseBM.unpinPage(temp, true);
@@ -153,7 +157,7 @@ public class Heapfile {
 				}
 				SystemDefs.JavabaseBM.unpinPage(temp, true);
 			}
-		}  catch (IOException e) {
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return false;
@@ -193,13 +197,116 @@ public class Heapfile {
 
 	public boolean updateRecord(RID rid, Tuple newTuple) throws ChainException {
 		// TODO Auto-generated method stub
-		
-		
+
+		// / dont forget to check that the insert method returns the pointer to
+		// the start of the linked list
+
+		HFPage traverse = new HFPage();
+		traverse = page;
+		while (true) {
+
+			try {
+				SystemDefs.JavabaseBM.pinPage(traverse.getCurPage(), traverse,
+						true);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			try {
+				if (traverse.getRecord(rid) != null) {
+
+					Tuple tuple = traverse.getRecord(rid);
+					if (tuple.getLength() == newTuple.getLength()) {
+						tuple.tupleCopy(newTuple);
+						SystemDefs.JavabaseBM.unpinPage(traverse.getCurPage(),
+								true);
+						return true;
+
+					} else {
+
+						// throw the exception here aboemera :)
+						// I left this part for you because of the problems I
+						// have with the jar
+						// the exception to be thrown is InvalidUpdateException
+						// --- > can be found in Test 4
+					}
+
+				} else {
+					SystemDefs.JavabaseBM.unpinPage(traverse.getCurPage(),
+							false);
+					PageId newPageId = traverse.getNextPage();
+					if (newPageId.pid == -1) {
+						break;
+					}
+					traverse.setCurPage(newPageId);
+
+				}
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+
 		return false;
 	}
 
 	public Tuple getRecord(RID rid) {
 		// TODO Auto-generated method stub
+		try {
+			page.setCurPage(firstPid);
+			while (page.getCurPage().pid != -1) {
+				Page myPage = new Page(page.getHFpageArray());
+				SystemDefs.JavabaseBM.pinPage(page.getCurPage(), myPage, false);
+				RID frid = page.firstRecord();
+				while(!frid.equals(null)){
+					if(frid.equals(rid))
+					{
+						Tuple inst = page.getRecord(rid);
+						SystemDefs.JavabaseBM.unpinPage(page.getCurPage(), false);
+						return inst;
+					}
+					frid = page.nextRecord(frid);
+				}
+				SystemDefs.JavabaseBM.unpinPage(page.getCurPage(), false);
+				page.setCurPage(page.getNextPage());
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ReplacerException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (HashOperationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (PageUnpinnedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidFrameNumberException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (PageNotReadException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BufferPoolExceededException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (PagePinnedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BufMgrException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (HashEntryNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidSlotNumberException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		return null;
 	}
 
