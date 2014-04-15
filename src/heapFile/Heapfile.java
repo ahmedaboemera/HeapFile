@@ -38,7 +38,6 @@ public class Heapfile {
 	    this.name = string;
 		if (SystemDefs.JavabaseDB.get_file_entry(string) == null) {
 			try {
-				System.out.println("hii");
 				pid = SystemDefs.JavabaseBM.newPage(first, 1);
 				SystemDefs.JavabaseDB.add_file_entry(string, pid);
 				page.init(pid, first);
@@ -93,9 +92,7 @@ public class Heapfile {
 		SystemDefs.JavabaseBM.pinPage(firstPid, toOpen, true);
 		SystemDefs.JavabaseBM.unpinPage(firstPid, false);
 
-		page.openHFpage(toOpen);
-		page.setPrevPage(new PageId(-1));
-		Scan scan = new Scan(page);
+		Scan scan = new Scan(toOpen);
 		return scan;
 	}
 
@@ -107,12 +104,12 @@ public class Heapfile {
 
 		HFPage tempPage = new HFPage();
 		PageId tempPageId = page.getCurPage();
-		PageId first = page.getCurPage();
 		while (tempPageId.pid != -1) {
 			SystemDefs.JavabaseBM.pinPage(tempPageId, tempPage, false);
 			if (tempPageId.pid == rid.pageNo.pid) {
 				tempPage.deleteRecord(rid);
 				SystemDefs.JavabaseBM.unpinPage(tempPageId, true);
+				recCnt--;
 				return true;
 			}// end if.
 			SystemDefs.JavabaseBM.unpinPage(tempPageId, false);
@@ -123,7 +120,7 @@ public class Heapfile {
 
 	public RID insertRecord(byte recPtr[]) throws IOException, ChainException {
 		RID rid = new RID();
-		if (recPtr.length > SystemDefs.JavabaseDB.MAX_SPACE) {
+		if (recPtr.length > GlobalConst.MAX_SPACE) {
 			throw new SpaceNotAvailableException(null, "SPACE_NOT_AVAILABLE");
 		}
 
